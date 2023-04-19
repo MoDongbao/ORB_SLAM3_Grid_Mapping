@@ -83,7 +83,7 @@ public:
 
     bool isFinished();
 
-    bool loop_detected; //modified
+    bool loop_detected;
 
     Viewer* mpViewer;
 

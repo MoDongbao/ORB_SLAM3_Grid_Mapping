@@ -5687,7 +5687,8 @@ void Optimizer::LocalBundleAdjustment(KeyFrame* pMainKF,vector<KeyFrame*> vpAdju
         if(pKFi->isBad() || pKFi->GetMap() != pCurrentMap)
             continue;
 
-        pKFi->mnBALocalForKF = pMainKF->mnId;
+        // pKFi->mnBALocalForKF = pMainKF->mnId;
+        pKFi->mnBALocalForMerge = pMainKF->mnId;
 
         g2o::VertexSE3Expmap * vSE3 = new g2o::VertexSE3Expmap();
         vSE3->setEstimate(Converter::toSE3Quat(pKFi->GetPose()));
@@ -5849,6 +5850,20 @@ void Optimizer::LocalBundleAdjustment(KeyFrame* pMainKF,vector<KeyFrame*> vpAdju
     if(pbStopFlag)
         if(*pbStopFlag)
             return;
+
+
+    // Make sure we have vertices to optimize!
+	// bool allVerticesMarginalized = true;
+	// for (size_t i = 0; i < optimizer.indexMapping().size(); ++i) {
+	// 	g2o::OptimizableGraph::Vertex* v = optimizer.indexMapping()[i];
+	// 	if (! v->marginalized()){
+	// 		allVerticesMarginalized = false;
+	// 		break;
+	// 	}
+	// }
+	// if( allVerticesMarginalized )
+	// 	return;
+
 
     optimizer.initializeOptimization();
     optimizer.optimize(5);

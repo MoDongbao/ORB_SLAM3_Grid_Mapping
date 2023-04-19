@@ -32,7 +32,15 @@
 
 #include "TwoViewReconstruction.h"
 
-/////////////////////
+
+// namespace cv 
+// { 
+// template<typename _Tp, int m, int n> static inline Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, float alpha) 
+// {
+//  return Matx<_Tp, m, n>(a, 1.f / alpha, Matx_ScaleOp()); 
+// } 
+// }
+
 namespace cv 
 { 
 template<typename _Tp, int m, int n> static inline Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, float alpha) 
@@ -40,7 +48,7 @@ template<typename _Tp, int m, int n> static inline Matx<_Tp, m, n> operator / (c
  return Matx<_Tp, m, n>(a, 1.f / alpha, Matx_ScaleOp()); 
 } 
 }
-/////////////////////
+
 
 namespace ORB_SLAM3 {
     class KannalaBrandt8 final : public GeometricCamera {

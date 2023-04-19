@@ -1,3 +1,5 @@
+
+//  if(bUseViewer) 关闭窗口
 /**
 * This file is part of ORB-SLAM3
 *
@@ -261,6 +263,23 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
 
     cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp,filename);
+	
+	 if (!Tcw.empty())
+	{
+					cv::Mat Twc_cout =Tcw.inv();
+                    //rowRange(取行) // colRange（取列）
+                    
+					cv::Mat RWC_cout= Twc_cout.rowRange(0,3).colRange(0,3);  
+        
+					cv::Mat tWC_cout=  Twc_cout.rowRange(0,3).col(3); 
+                    cout<<"变换Twc:\n"<<Twc_cout<<endl;
+                    cout<<"旋转Rwc:\n"<<RWC_cout<<endl;
+                    cout<<"平移twc:\n"<<tWC_cout<<endl;
+                    cout<<"--------------------"<<endl;
+    }
+   
+
+	
 
     unique_lock<mutex> lock2(mMutexState);
     mTrackingState = mpTracker->mState;
@@ -324,11 +343,34 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, const
 
     cv::Mat Tcw = mpTracker->GrabImageMonocular(im,timestamp,filename);
 
+ if (!Tcw.empty())
+	{
+					cv::Mat Twc_cout =Tcw.inv();
+                    //rowRange(取行) // colRange（取列）
+                    
+					cv::Mat RWC_cout= Twc_cout.rowRange(0,3).colRange(0,3);  
+        
+					cv::Mat tWC_cout=  Twc_cout.rowRange(0,3).col(3); 
+                    cout<<"变换Twc:\n"<<Twc_cout<<endl;
+                    cout<<"旋转Rwc:\n"<<RWC_cout<<endl;
+                    cout<<"平移twc:\n"<<tWC_cout<<endl;
+                    cout<<"--------------------"<<endl;
+    }
+
     unique_lock<mutex> lock2(mMutexState);
     mTrackingState = mpTracker->mState;
     mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
 
+    //cout<<Tcw<<endl;
+        // Eigen::Quaterniond q = Eigen::Quaterniond(Tcw.rotationMatrix());
+        // cout << Tcw.translation()(0,0)<<" "
+        //      << Tcw.translation()(1,0)<<" "
+        //      << Tcw.translation()(2,0)<<" "
+        //      << q.coeffs().transpose()(0)<<" "
+        //      << q.coeffs().transpose()(1)<<" "
+        //      << q.coeffs().transpose()(2)<<" "
+        //      << q.coeffs().transpose()(3)<<endl;
     return Tcw;
 }
 
@@ -492,8 +534,20 @@ void System::SaveKeyFrameTrajectoryTUM(const string &filename)
         cv::Mat R = pKF->GetRotation().t();
         vector<float> q = Converter::toQuaternion(R);
         cv::Mat t = pKF->GetCameraCenter();
+
+        cout<<"---------------------"<<endl;
+        cout<<"时间戳："<<pKF->mTimeStamp<<endl;
+        cout<<"平移向量:"<<t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)<<endl;
+        cout<<"四元数旋转(q0在前):"<< q[0] << " " << q[1] << " " << q[2] << " " << q[3] << endl;
+         cout<<"---------------------"<<endl;
         f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)
           << " " << q[0] << " " << q[1] << " " << q[2] << " " << q[3] << endl;
+
+        //只保存平移
+        //控制输出流显示浮点数的数字个数
+        // f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)<<endl;
+
+
 
     }
 

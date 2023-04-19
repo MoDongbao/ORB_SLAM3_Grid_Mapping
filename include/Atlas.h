@@ -22,9 +22,9 @@
 #include "Map.h"
 #include "MapPoint.h"
 #include "KeyFrame.h"
-#include "GeometricCamera.h"
-#include "Pinhole.h"
-#include "KannalaBrandt8.h"
+#include "include/CameraModels/GeometricCamera.h"
+#include "include/CameraModels/Pinhole.h"
+#include "include/CameraModels/KannalaBrandt8.h"
 
 #include <set>
 #include <mutex>

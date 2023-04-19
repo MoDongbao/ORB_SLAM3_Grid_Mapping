@@ -127,8 +127,8 @@ public:
     cv::Mat mRwc;
     cv::Mat mOw;
 public:
-    bool is_keyframe; //modified
 
+    bool is_keyframe;
     // Vocabulary used for relocalization.
     ORBVocabulary* mpORBvocabulary;
 

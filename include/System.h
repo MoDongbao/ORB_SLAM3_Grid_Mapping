@@ -97,6 +97,14 @@ public:
 
 public:
 
+    Atlas* getMap() {
+        return mpAtlas;
+    }
+
+    Tracking* getTracker(){ return mpTracker; }
+    LocalMapping* getLocalMapping(){ return mpLocalMapper; }
+    LoopClosing* getLoopClosing(){ return mpLoopCloser; }
+
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
     System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true, const int initFr = 0, const string &strSequence = std::string(), const string &strLoadingFile = std::string());
 
@@ -173,14 +181,6 @@ public:
 
     void ChangeDataset();
 
-    // For grid mapping
-    Atlas* getMap() {
-        return mpAtlas;
-    }
-    Tracking* getTracker(){ return mpTracker; }
-    LocalMapping* getLocalMapping(){ return mpLocalMapper; }
-    LoopClosing* getLoopClosing(){ return mpLoopCloser; }
-    
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);
 

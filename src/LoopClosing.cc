@@ -832,7 +832,6 @@ int LoopClosing::FindMatchesByProjection(KeyFrame* pCurrentKF, KeyFrame* pMatche
 void LoopClosing::CorrectLoop()
 {
     cout << "Loop detected!" << endl;
-    loop_detected = mpTracker->loop_detected = true; //modified
 
     // Send a stop signal to Local Mapping
     // Avoid new keyframes are inserted while correcting the loop
@@ -2078,6 +2077,8 @@ void LoopClosing::RunGlobalBundleAdjustment(Map* pActiveMap, unsigned long nLoop
         mbFinishedGBA = true;
         mbRunningGBA = false;
     }
+
+    loop_detected = mpTracker->loop_detected = true;
 
 #ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_EndMapUpdate = std::chrono::steady_clock::now();
