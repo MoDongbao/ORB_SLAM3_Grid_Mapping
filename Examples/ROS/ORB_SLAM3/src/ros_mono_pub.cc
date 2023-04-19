@@ -1,4 +1,3 @@
-#include <unistd.h>
 #include<iostream>
 #include<algorithm>
 #include<fstream>
@@ -16,8 +15,10 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include<opencv2/core/core.hpp>
+#include "eigen3/Eigen/Dense"
+#include "opencv2/core/eigen.hpp"
 
-#include"../../../include/System.h"
+#include "../ORB_SLAM3_LIB/include/System.h"
 
 #include "MapPoint.h"
 #include <opencv2/highgui/highgui_c.h>
@@ -26,7 +27,7 @@
 
 //! parameters
 bool read_from_topic = false, read_from_camera = false;
-std::string image_topic = "/camera/image_raw";
+std::string image_topic = "/usb_cam/image_raw";
 int all_pts_pub_gap = 0;
 
 vector<string> vstrImageFilenames;
@@ -75,33 +76,54 @@ int main(int argc, char **argv){
 	ros::Publisher pub_pts_and_pose = nodeHandler.advertise<geometry_msgs::PoseArray>("pts_and_pose", 1000);
 	ros::Publisher pub_all_kf_and_pts = nodeHandler.advertise<geometry_msgs::PoseArray>("all_kf_and_pts", 1000);
 	if (read_from_topic) {
-		ImageGrabber igb(SLAM, pub_pts_and_pose, pub_all_kf_and_pts);
-		ros::Subscriber sub = nodeHandler.subscribe(image_topic, 1, &ImageGrabber::GrabImage, &igb);
-		ros::spin();
+		// ImageGrabber igb(SLAM, pub_pts_and_pose, pub_all_kf_and_pts);
+		// ros::Subscriber sub = nodeHandler.subscribe(image_topic, 1, &ImageGrabber::GrabImage, &igb);
+		// ros::spin();
+		// cv::VideoCapture cam("/home/touchair/mmexport1650362734267.mp4");
+		cv::VideoCapture cam("/home/touchair/test/ground_640x480.mp4");
+		cv::Mat im;
+		int tframe = 0;
+		if(!cam.isOpened())
+		{
+			cerr << endl << "image || camera Failed to load  !"<<endl;
+            return 1;
+		}
+
+		while (cam.isOpened())
+		{
+			cam >> im;
+			cv::resize(im, im, cv::Size(640, 480));
+			SLAM.TrackMonocular(im, tframe);
+			publish(SLAM, pub_pts_and_pose, pub_all_kf_and_pts, tframe);
+			tframe++;
+
+			if(im.empty())
+				break;
+		}
+
+		cam.release();
+		cv::destroyAllWindows();
+		
 	}
 	else{
 		ros::Rate loop_rate(5);
 		cv::Mat im;
 		double tframe = 0;
-#ifdef COMPILEDWITHC11
+
 		std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-#else
-		std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
-#endif
+
 		for (int frame_id = 0; read_from_camera || frame_id < n_images; ++frame_id){
 			if (read_from_camera) {
 				cap_obj.read(im);
-#ifdef COMPILEDWITHC11
+
 				std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-#else
-				std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
-#endif
+
 				tframe = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 				//printf("fps: %f\n", 1.0 / tframe);
 			}
 			else {
 				// Read image from file
-				im = cv::imread(vstrImageFilenames[frame_id], CV_LOAD_IMAGE_UNCHANGED);
+				im = cv::imread(vstrImageFilenames[frame_id], cv::IMREAD_UNCHANGED);
 				tframe = vTimestamps[frame_id];
 			}
 			if (im.empty()){
@@ -113,22 +135,22 @@ int main(int argc, char **argv){
 
 			publish(SLAM, pub_pts_and_pose, pub_all_kf_and_pts, frame_id);
 
-			//cv::imshow("Press escape to exit", im);
-			//if (cv::waitKey(1) == 27) {
-			//	break;
-			//}
+			cv::imshow("Press escape to exit", im);
+			if (cv::waitKey(1) == 27) {
+				break;
+			}
 			ros::spinOnce();
 			loop_rate.sleep();
 			if (!ros::ok()){ break; }
 		}
 	}
-	//ros::spin();
+	// ros::spin();
 
-	mkdir("results", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	SLAM.getMap()->GetCurrentMap()->Save("results//map_pts_out.obj");
-	SLAM.getMap()->GetCurrentMap()->SaveWithTimestamps("results//map_pts_and_keyframes.txt");
-	// Save camera trajectory
-	SLAM.SaveKeyFrameTrajectoryTUM("results//key_frame_trajectory.txt");
+	// mkdir("results", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	// SLAM.getMap()->Save("results/map_pts_out.obj");
+	// SLAM.getMap()->SaveWithTimestamps("results/map_pts_and_keyframes.txt");
+	// // Save camera trajectory
+	// SLAM.SaveKeyFrameTrajectoryTUM("results/key_frame_trajectory.txt");
 
 
 	// Stop all threads
@@ -146,10 +168,16 @@ void publish(ORB_SLAM3::System &SLAM, ros::Publisher &pub_pts_and_pose,
 		pub_all_pts = true;
 		pub_count = 0;
 	}
+	// cout << all_pts_pub_gap << " " << pub_count << "endl ";
+	// cout << pub_all_pts << SLAM.getLoopClosing()->loop_detected << SLAM.getTracker()->loop_detected<< endl;
+	// cout << SLAM.getTracker()->mCurrentFrame.is_keyframe << endl;
+
+	// pub_all_pts = true;
+
 	if (pub_all_pts || SLAM.getLoopClosing()->loop_detected || SLAM.getTracker()->loop_detected) {
 		pub_all_pts = SLAM.getTracker()->loop_detected = SLAM.getLoopClosing()->loop_detected = false;
 		geometry_msgs::PoseArray kf_pt_array;
-		vector<ORB_SLAM3::KeyFrame*> key_frames = SLAM.getMap()->GetCurrentMap()->GetAllKeyFrames();
+		vector<ORB_SLAM3::KeyFrame*> key_frames = SLAM.getMap()->GetAllKeyFrames();
 		//! placeholder for number of keyframes
 		kf_pt_array.poses.push_back(geometry_msgs::Pose());
 		sort(key_frames.begin(), key_frames.end(), ORB_SLAM3::KeyFrame::lId);
@@ -212,6 +240,7 @@ void publish(ORB_SLAM3::System &SLAM, ros::Publisher &pub_pts_and_pose,
 		pub_all_kf_and_pts.publish(kf_pt_array);
 	}
 	else if (SLAM.getTracker()->mCurrentFrame.is_keyframe) {
+		std::cout << "is keyframe" << std::endl;
 		++pub_count;
 		SLAM.getTracker()->mCurrentFrame.is_keyframe = false;
 		ORB_SLAM3::KeyFrame* pKF = SLAM.getTracker()->mCurrentFrame.mpReferenceKF;
@@ -219,28 +248,29 @@ void publish(ORB_SLAM3::System &SLAM, ros::Publisher &pub_pts_and_pose,
 		cv::Mat Trw = cv::Mat::eye(4, 4, CV_32F);
 
 		// If the reference keyframe was culled, traverse the spanning tree to get a suitable keyframe.
-		//while (pKF->isBad())
-		//{
-		//	Trw = Trw*pKF->mTcp;
-		//	pKF = pKF->GetParent();
-		//}
+		// while (pKF->isBad())
+		// {
+		// 	Trw = Trw*pKF->mTcp;
+		// 	pKF = pKF->GetParent();
+		// }
 
-		vector<ORB_SLAM3::KeyFrame*> vpKFs = SLAM.getMap()->GetCurrentMap()->GetAllKeyFrames();
-		sort(vpKFs.begin(), vpKFs.end(), ORB_SLAM3::KeyFrame::lId);
-
+		vector<ORB_SLAM3::KeyFrame*> vpKFs = SLAM.getMap()->GetAllKeyFrames();
+		sort(vpKFs.begin(),vpKFs.end(),ORB_SLAM3::KeyFrame::lId);
 		// Transform all keyframes so that the first keyframe is at the origin.
 		// After a loop closure the first keyframe might not be at the origin.
 		cv::Mat Two = vpKFs[0]->GetPoseInverse();
 
-		Trw = Trw*pKF->GetPose()*Two;
+		Trw = Trw * pKF->GetPose() * Two;
+
 		cv::Mat lit = SLAM.getTracker()->mlRelativeFramePoses.back();
-		cv::Mat Tcw = lit*Trw;
+		cv::Mat Tcw = lit * Trw;
 		cv::Mat Rwc = Tcw.rowRange(0, 3).colRange(0, 3).t();
 		cv::Mat twc = -Rwc*Tcw.rowRange(0, 3).col(3);
-
+		
+		
 		vector<float> q = ORB_SLAM3::Converter::toQuaternion(Rwc);
 		//geometry_msgs::Pose camera_pose;
-		//std::vector<ORB_SLAM3::MapPoint*> map_points = SLAM.getMap()->GetCurrentMap()->GetAllMapPoints();
+		//std::vector<ORB_SLAM3::MapPoint*> map_points = SLAM.getMap()->GetAllMapPoints();
 		std::vector<ORB_SLAM3::MapPoint*> map_points = SLAM.GetTrackedMapPoints();
 		int n_map_pts = map_points.size();
 
@@ -272,7 +302,7 @@ void publish(ORB_SLAM3::System &SLAM, ros::Publisher &pub_pts_and_pose,
 				//printf("Point %d is bad\n", pt_id);
 				continue;
 			}
-			cv::Mat wp = map_points[pt_id - 1]->GetWorldPos();
+			cv::Mat wp = map_points[pt_id -1]->GetWorldPos();
 
 			if (wp.empty()) {
 				//printf("World position for point %d is empty\n", pt_id);
@@ -344,6 +374,7 @@ void LoadImages(const string &strPathToSequence, vector<string> &vstrImageFilena
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg){
 	// Copy the ros image message to cv::Mat.
 	cv_bridge::CvImageConstPtr cv_ptr;
+	cv::Mat img;
 	try{
 		cv_ptr = cv_bridge::toCvShare(msg);
 	}
@@ -351,7 +382,11 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg){
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
-	SLAM.TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
+	
+	img = cv_ptr->image.clone();
+	// std::cout << img.size() << std::endl;
+	cv::resize(img, img, cv::Size(640, 480));
+	SLAM.TrackMonocular(img, cv_ptr->header.stamp.toSec());
 	publish(SLAM, pub_pts_and_pose, pub_all_kf_and_pts, frame_id);
 	++frame_id;
 }
@@ -372,8 +407,8 @@ bool parseParams(int argc, char **argv) {
 				ros::shutdown();
 				return 0;
 			}
-			int img_height = cap_obj.get(CV_CAP_PROP_FRAME_HEIGHT);
-			int img_width = cap_obj.get(CV_CAP_PROP_FRAME_WIDTH);
+			int img_height = cap_obj.get(cv::CAP_PROP_FRAME_HEIGHT);
+			int img_width = cap_obj.get(cv::CAP_PROP_FRAME_WIDTH);
 			printf("Images are of size: %d x %d\n", img_width, img_height);
 		}
 		else {
