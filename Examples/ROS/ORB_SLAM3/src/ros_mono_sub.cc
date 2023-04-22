@@ -1,5 +1,5 @@
 //#include <Eigen/Dense>
-
+#include <unistd.h>
 #include<iostream>
 #include<algorithm>
 #include<fstream>
@@ -161,7 +161,8 @@ void saveMap(unsigned int id) {
 
 }
 void ptCallback(const geometry_msgs::PoseArray::ConstPtr& pts_and_pose){
-	std::cout << "ptCallback" << std::endl;
+	//ROS_INFO("Received points and pose: [%s]{%d}", pts_and_pose->header.frame_id.c_str(),
+	//	pts_and_pose->header.seq);
 	//if (pts_and_pose->header.seq==0) {
 	//	cv::destroyAllWindows();
 	//	saveMap();
@@ -186,7 +187,8 @@ void ptCallback(const geometry_msgs::PoseArray::ConstPtr& pts_and_pose){
 	pub_grid_map.publish(grid_map_msg);
 }
 void loopClosingCallback(const geometry_msgs::PoseArray::ConstPtr& all_kf_and_pts){
-	std::cout << "loopClosingCallback" << std::endl;
+	//ROS_INFO("Received points and pose: [%s]{%d}", pts_and_pose->header.frame_id.c_str(),
+	//	pts_and_pose->header.seq);
 	//if (all_kf_and_pts->header.seq == 0) {
 	//	cv::destroyAllWindows();
 	//	saveMap();
@@ -349,7 +351,7 @@ void resetGridMap(const geometry_msgs::PoseArray::ConstPtr& all_kf_and_pts){
 		return;
 	}
 	printf("Resetting grid map with %d key frames\n", n_kf);
-#if 1 
+#ifdef COMPILEDWITHC11
 	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 #else
 	std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
@@ -385,9 +387,11 @@ void resetGridMap(const geometry_msgs::PoseArray::ConstPtr& all_kf_and_pts){
 		id += n_pts;
 	}	
 	getGridMap();
-
+#ifdef COMPILEDWITHC11
 	std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-
+#else
+	std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+#endif
 	double ttrack = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
 	printf("Done. Time taken: %f secs\n", ttrack);
 	pub_grid_map.publish(grid_map_msg);
